@@ -1,0 +1,5 @@
+job-portal-frontend/node_modules
+job-portal-backend/node_modules
+job-portal-frontend/.env
+job-portal-backend/.env
+job-portal-frontend/dist
