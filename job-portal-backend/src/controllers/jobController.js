@@ -59,7 +59,11 @@ export const getJobById = async (req, res) => {
 
 export const createJob = async (req, res) => {
   try {
-    const job = await prisma.job.create({ data: req.body })
+    const data = { ...req.body }
+    if (data.deadline) {
+      data.deadline = new Date(data.deadline).toISOString()
+    }
+    const job = await prisma.job.create({ data })
     res.status(201).json(job)
   } catch (err) {
     res.status(500).json({ message: 'Failed to create job', error: err.message })
@@ -68,9 +72,13 @@ export const createJob = async (req, res) => {
 
 export const updateJob = async (req, res) => {
   try {
+    const data = { ...req.body }
+    if (data.deadline) {
+      data.deadline = new Date(data.deadline).toISOString()
+    }
     const job = await prisma.job.update({
       where: { id: req.params.id },
-      data: req.body,
+      data,
     })
     res.json(job)
   } catch (err) {
