@@ -6,7 +6,7 @@ import {
   verifyRefreshToken,
 } from '../utils/jwt.js'
 
-import { registerSchema } from './../validators/authValidator';
+import { registerSchema } from './../validators/authValidator.js';
 
 export const registerUser = async (req, res) => {
   try {
@@ -32,12 +32,12 @@ export const registerUser = async (req, res) => {
     if (err.code === 'P2002' && err.meta?.target?.includes('email')) {
       return res.status(409).json({ message: 'Email already registered' })
     }
-
+ 
     console.error('registerUser error:', err)
     return res.status(500).json({ message: 'Registration failed. Please try again later.' })
   
   }
-}
+} 
 
 export const loginUser = async (req, res) => {
   try {
