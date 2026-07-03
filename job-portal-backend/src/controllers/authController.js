@@ -6,9 +6,19 @@ import {
   verifyRefreshToken,
 } from '../utils/jwt.js'
 
+import { registerSchema } from './../validators/authValidator';
+
 export const registerUser = async (req, res) => {
   try {
-    const { name, email, password } = req.body
+    const parsed = registerSchema.safeParse(req.body)
+    if (!parsed.success) {
+      return res.status(400).json({
+        message: 'Validation failed',
+        errors: parsed.error.flatten().fieldErrors,
+      })
+    }
+
+    const { name, email, password } = parsed.data
     const existing = await prisma.user.findUnique({ where: { email } })
     if (existing) return res.status(400).json({ message: 'Email already registered' })
 
@@ -18,7 +28,14 @@ export const registerUser = async (req, res) => {
     })
     res.status(201).json({ message: 'Account created successfully', userId: user.id })
   } catch (err) {
-    res.status(500).json({ message: 'Registration failed', error: err.message })
+
+    if (err.code === 'P2002' && err.meta?.target?.includes('email')) {
+      return res.status(409).json({ message: 'Email already registered' })
+    }
+
+    console.error('registerUser error:', err)
+    return res.status(500).json({ message: 'Registration failed. Please try again later.' })
+  
   }
 }
 
