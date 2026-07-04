@@ -53,8 +53,8 @@ const JobCard = ({ job, onClick }) => (
       </Typography>
       <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          <Chip label={job.category} size="small" variant="outlined" />
-          <Chip label={job.experienceLevel} size="small" variant="outlined" />
+          <Chip label={job.category} size="small" variant="outlined" sx={{ backgroundColor: '#cec3ff' }} />
+          <Chip label={job.experienceLevel} size="small" variant="outlined" sx={{ backgroundColor: '#cec3ff' }} />
         </Box>
         {job.salaryMin && (
           <Typography variant="body2" fontWeight={700} color="#2e7d32">
