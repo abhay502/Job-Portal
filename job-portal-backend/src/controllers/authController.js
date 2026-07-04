@@ -6,7 +6,7 @@ import {
   verifyRefreshToken,
 } from '../utils/jwt.js'
 
-import { registerSchema } from './../validators/authValidator.js';
+import { loginSchema, registerSchema } from './../validators/authValidator.js';
 
 export const registerUser = async (req, res) => {
   try {
@@ -40,8 +40,16 @@ export const registerUser = async (req, res) => {
 } 
 
 export const loginUser = async (req, res) => {
+    const parsed = loginSchema.safeParse(req.body)
+    if (!parsed.success) {
+      return res.status(400).json({
+        message: 'Validation failed',
+        errors: parsed.error.flatten().fieldErrors,
+      })
+    }
+    const { email, password } = parsed.data
   try {
-    const { email, password } = req.body
+    
     const user = await prisma.user.findUnique({ where: { email } })
     if (!user || user.role !== 'USER')
       return res.status(401).json({ message: 'Invalid credentials' })
@@ -55,12 +63,20 @@ export const loginUser = async (req, res) => {
 
     await prisma.user.update({ where: { id: user.id }, data: { refreshToken } })
 
-    res.json({
-      accessToken, refreshToken,
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production', // requires HTTPS in prod; allow HTTP in local dev
+      sameSite: 'strict',                              // blocks the cookie being sent on cross-site requests (CSRF mitigation)
+      maxAge: 7 * 24 * 60 * 60 * 1000,                  // 7 days — match your generateRefreshToken expiry
+    })
+
+   return res.json({
+      accessToken,
       user: { id: user.id, name: user.name, email: user.email, role: user.role },
     })
   } catch (err) {
-    res.status(500).json({ message: 'Login failed', error: err.message })
+    console.error('loginUser error:', err)
+    return res.status(500).json({ message: 'Login failed. Please try again later.' }) 
   }
 }
 
@@ -91,7 +107,8 @@ export const loginAdmin = async (req, res) => {
 
 export const refreshToken = async (req, res) => {
   try {
-    const { refreshToken } = req.body
+    // Read from the httpOnly cookie, not req.body — the frontend no longer sends it in the body.
+    const refreshToken = req.cookies?.refreshToken
     if (!refreshToken) return res.status(401).json({ message: 'No refresh token' })
 
     const decoded = verifyRefreshToken(refreshToken)
@@ -102,11 +119,24 @@ export const refreshToken = async (req, res) => {
 
     const payload = { id: user.id, role: user.role, name: user.name }
     const newAccessToken = generateAccessToken(payload)
-    const newRefreshToken = generateRefreshToken(payload)
+    const newRefreshToken = generateRefreshToken(payload) // rotation: issue a new refresh token each time
 
     await prisma.user.update({ where: { id: user.id }, data: { refreshToken: newRefreshToken } })
 
-    res.json({ accessToken: newAccessToken, refreshToken: newRefreshToken })
+    // Re-set the cookie with the rotated refresh token — same options used at login,
+    // or the browser will treat it as a different cookie / fail to overwrite it correctly.
+    res.cookie('refreshToken', newRefreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    })
+
+    // Refresh token no longer goes in the JSON body — it's only ever in the cookie now.
+    res.json({
+      accessToken: newAccessToken,
+      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+    })
   } catch {
     res.status(403).json({ message: 'Invalid or expired refresh token' })
   }

@@ -9,7 +9,7 @@ export const loginUser = (credentials) =>
 export const registerUser = (data) =>
   axiosInstance.post('/auth/user/register', data)
 
-export const refreshToken = (token) =>
-  axiosInstance.post('/auth/refresh-token', { refreshToken: token })
+export const refreshAccessToken  = (token) =>
+  axiosInstance.post('/auth/refresh-token', { })
 
 export const getMe = () => axiosInstance.get('/auth/me')
